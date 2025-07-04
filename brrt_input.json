@@ -1,0 +1,10 @@
+{
+    "trial": 243,
+    "environment": "1.0|0.7-0|2-8-8",
+    "p1": 0.7,
+    "u_p": 0,
+    "alpha": 2,
+    "beta": 8,
+    "gamma": 8,
+    "epsilon": 1.0
+}
