@@ -32,7 +32,7 @@ OF SUCH DAMAGE.
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 
-#define NUMBER_TEST_TIMES 1000
+#define NUMBER_TEST_TIMES 100
 class TesterPathFinder
 {
 private:
@@ -57,15 +57,15 @@ private:
     // Implement for testing path planning algorithms
     BiasSampler sampler_;
     BRRTExperimentMultiAlgo *manager;
+    std::string input_param_;
+    std::string output_result_;
 
 public:
     TesterPathFinder(const ros::NodeHandle &nh) : nh_(nh)
     {
         env_ptr_ = std::make_shared<env::OccMap>();
         env_ptr_->init(nh_);
-        manager = new BRRTExperimentMultiAlgo(
-            "/home/x/sampling-based-path-finding/brrt_input.json",
-            "/home/x/sampling-based-path-finding/evaluation/20250704/brrt_ouput");
+      
         vis_ptr_ = std::make_shared<visualization::Visualization>(nh_);
         vis_ptr_->registe<visualization_msgs::Marker>("start");
         vis_ptr_->registe<visualization_msgs::Marker>("goal");
@@ -113,6 +113,13 @@ public:
         nh_.param("run_brrt", run_brrt_, false);
         nh_.param("run_brrt_star", run_brrt_star_, false);
         nh_.param("run_brrt_optimize", run_brrt_optimize_, false);
+        nh_.param("input_param", input_param_, std::string("/home/x/Develop/brrt_optimize/brrt_input.json"));
+        nh_.param("output_result", output_result_, std::string("/home/x/Develop/evaluation/20250705/"));
+        std::cout <<"input_param: " << input_param_ << std::endl;
+        std::cout <<"output_result: " << output_result_ << std::endl;
+        manager = new BRRTExperimentMultiAlgo(
+        input_param_,
+        output_result_);
     }
     ~TesterPathFinder()
     {
@@ -261,19 +268,19 @@ public:
     void experiment_test()
     {
         start_ = get_sample_valid();
+        const auto &input = manager->get_input();
+        ROS_INFO("Running Test %d", input.trial);
         for (int i = 0; i < NUMBER_TEST_TIMES; ++i)
         {
 
 
             Eigen::Vector3d goal = get_sample_valid();
-            print_vector3d("Start Vector", start_);
-            print_vector3d("Goal Vector", goal);
             // if (manager->current_run_index() > NUMBER_TEST_TIMES) {
             //
             //     return;
             // }
-            const auto &input = manager->get_input();
-            ROS_INFO("Running Test %d - Run #%d", input.trial, manager->current_run_index());
+            
+            
 
             std::map<std::string, AlgoResult> algo_outputs;
 
@@ -306,7 +313,7 @@ public:
                 algo_outputs["BRRT_Optimize"] = {false, 0.0, 0.0, 0, 0, start_, goal_};
             }
             start_ = goal;
-
+            // std::cout << "Run " << i + 1 << " completed." << std::endl;
             manager->store_output_for_run(algo_outputs);
         }
         manager->save_json();

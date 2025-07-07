@@ -93,6 +93,7 @@ public:
         j["results"] = result_array;
 
         std::ofstream file(json_out_path_);
+        std::cout << "Saving results to: " << json_out_path_ << std::endl;
         file << j.dump(4);
     }
 
@@ -119,6 +120,6 @@ private:
         input_.beta = j.at("beta").get<double>();
         input_.gamma = j.at("gamma").get<double>();
         input_.epsilon = j.at("epsilon").get<double>();
-        json_out_path_ =  json_out_path_  + input_.environment + ".json";
+        // json_out_path_ =  json_out_path_  + input_.environment + ".json";
     }
 };

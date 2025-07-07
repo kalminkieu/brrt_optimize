@@ -84,7 +84,6 @@ namespace path_plan
       vis_ptr_->visualize_a_ball(s, 0.3, "start", visualization::Color::pink);
       vis_ptr_->visualize_a_ball(g, 0.3, "goal", visualization::Color::steelblue);
 
-      ROS_INFO("[BRRT]: BRRT starts planning a path max intertion: %d",max_iteration_);
       return brrt(s, g);
     }
 
@@ -311,6 +310,11 @@ namespace path_plan
         /* Add x_new to treeA */
         double dist_from_A = nearest_nodeA->cost_from_start + steer_length_;
         RRTNode3DPtr new_nodeA(nullptr);
+        if (valid_tree_node_nums_ + 1 >= max_tree_node_nums_)
+        {
+           valid_tree_node_nums_ = max_tree_node_nums_; // max_node_num reached
+          break;
+        }
         new_nodeA = addTreeNode(nearest_nodeA, x_new, dist_from_A, steer_length_);
         kd_insert3(treeA, x_new[0], x_new[1], x_new[2], new_nodeA);
 
@@ -374,15 +378,15 @@ namespace path_plan
         final_path_ = path_list_.back();
         
       }
-      else if (valid_tree_node_nums_ == max_tree_node_nums_)
-      {
-        // visualizeWholeTree();
-        ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << max_tree_node_nums_ << " nodes added to rrt-tree");
-      }
-      else
-      {
-        ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << (ros::Time::now() - rrt_start_time).toSec() << " seconds");
-      }
+      // else if (valid_tree_node_nums_ == max_tree_node_nums_)
+      // {
+      //   // visualizeWholeTree();
+      //   ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << max_tree_node_nums_ << " nodes added to rrt-tree");
+      // }
+      // else
+      // {
+      //   ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << (ros::Time::now() - rrt_start_time).toSec() << " seconds");
+      // }
       return tree_connected;
     }
 

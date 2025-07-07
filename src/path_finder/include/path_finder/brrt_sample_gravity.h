@@ -80,10 +80,8 @@ namespace path_plan
       goal_node_->cost_from_start = 0.0; // important
       valid_tree_node_nums_ = 2;         // put start and goal in tree
 
-      vis_ptr_->visualize_a_ball(s, 0.3, "start", visualization::Color::pink);
-      vis_ptr_->visualize_a_ball(g, 0.3, "goal", visualization::Color::steelblue);
-
-      ROS_INFO("[BRRT_Optimize]: BRRT starts planning a path max_interation: %d", max_iteration_);
+      // vis_ptr_->visualize_a_ball(s, 0.3, "start", visualization::Color::pink);
+      // vis_ptr_->visualize_a_ball(g, 0.3, "goal", visualization::Color::steelblue);
       cache.clear(); // clear the heuristic cache before planning
       return brrt_optimize(s, g);
     }
@@ -281,40 +279,9 @@ namespace path_plan
       si_G_dist = si_G.norm();
       gi_S_dist = gi_S.norm();
       h = brrt_optimize_alpha_ * si_gi_dist + brrt_optimize_beta_ * si_G_dist + brrt_optimize_gamma_ * gi_S_dist;
-     
       return h;
     }
-    std::pair<RRTNode3DPtr, RRTNode3DPtr> search_nearest_heuristic(kdtree *treeA, kdtree *treeB)
-    {
-      RRTNode3DPtr selected_SI, selected_GI;
-      struct kdres *nodesB, *nodesA;
-      double min_houristic = DBL_MAX;
-      RRTNode3DPtr nodeSi, nodeGi;
-      nodesA = kd_nearest_range3(treeA, 0, 0, 0, DBL_MAX);
-      selected_GI = goal_node_;
-      selected_SI = start_node_;
-      for (int i = 0; i < kd_res_size(nodesA); ++i)
-      {
-        nodeSi = (RRTNode3DPtr)kd_res_item_data(nodesA);
-        nodesB = kd_nearest_range3(treeB, 0, 0, 0, DBL_MAX);
-        for (int j = 0; j < kd_res_size(nodesB); ++j)
-        {
-          nodeGi = (RRTNode3DPtr)kd_res_item_data(nodesB);
-          double h = computeH(nodeSi->x, nodeGi->x);
-          if (h < min_houristic)
-          {
-            min_houristic = h;
-            selected_SI = nodeSi;
-            selected_GI = nodeGi;
-          }
-          kd_res_next(nodesB);
-        }
-        kd_res_next(nodesA);
-        kd_res_free(nodesB);
-      }
-      kd_res_free(nodesA);
-      return std::make_pair(selected_SI, selected_GI);
-    }
+    
 
     void update_cache_nearest_heuristic(RRTNode3DPtr nodeSi,kdtree *treeA, kdtree *treeB)
     {
@@ -441,7 +408,6 @@ namespace path_plan
     }
     bool brrt_optimize(const Eigen::Vector3d &s, const Eigen::Vector3d &g)
     {
-      std::cout << "[BRRT_Optimize] Start planning with parameter: p1: " << brrt_optimize_p1_ << " u_p: " << brrt_optimize_u_p << " alpha: " << brrt_optimize_alpha_ << " beta: " << brrt_optimize_beta_ << " gamma: " << brrt_optimize_gamma_ << std::endl;
       ros::Time rrt_start_time = ros::Time::now();
       bool tree_connected = false;
       bool path_reverse = false;
@@ -479,7 +445,6 @@ namespace path_plan
         double random01 = dis(gen);
         struct kdres *p_nearestA = nullptr, *p_nearestB = nullptr;
         RRTNode3DPtr nearest_nodeA, nearest_nodeB;
-        // double pbias = 0.5; // default bias value
         double h_tmp;
         cache.getMinByTree(treeA, treeB, selected_SI, selected_GI,h_tmp);
         double pbias = computePbias(
@@ -490,10 +455,6 @@ namespace path_plan
         if (random01 < pbias)
         {
           
-          // std::pair<RRTNode3DPtr, RRTNode3DPtr> heuristic_pair = search_nearest_heuristic(treeA, treeB);
-          // selected_SI = heuristic_pair.first;
-          // selected_GI = heuristic_pair.second;
-  
           Eigen::Vector3d x_tmp = computeT(selected_SI->x, selected_GI->x, x_rand);
           nearest_nodeA = selected_SI;
           x_new = steer(nearest_nodeA->x, x_tmp, steer_length_);
@@ -550,6 +511,11 @@ namespace path_plan
         // Extend Node A by steer
         double dist_from_A = nearest_nodeA->cost_from_start + steer_length_;
         RRTNode3DPtr new_nodeA(nullptr);
+        if (valid_tree_node_nums_ + 1 >= max_tree_node_nums_)
+        {
+           valid_tree_node_nums_ = max_tree_node_nums_; // max_node_num reached
+          break;
+        }
         new_nodeA = addTreeNode(nearest_nodeA, x_new, dist_from_A, steer_length_);
     
         kd_insert3(treeA, x_new[0], x_new[1], x_new[2], new_nodeA);
