@@ -6,8 +6,8 @@
   <arg name="simulation" default="true"/>
   <arg name="drone_number" default="1"/>
 
-  <arg name="map_size_x" value="50.0"/>
-  <arg name="map_size_y" value="50.0"/>
+  <arg name="map_size_x" value="1000.0"/>
+  <arg name="map_size_y" value="1000.0"/>
   <arg name="map_size_z" value="1.5"/>
 
   <arg name="init_x" value="0.0"/>

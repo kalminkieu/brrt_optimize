@@ -34,6 +34,14 @@ OF SUCH DAMAGE.
 #include <functional>
 
 
+
+#include <unordered_set>
+#include <queue>
+#include <vector>
+#include <limits>
+
+
+
 struct TreeNode
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -127,84 +135,128 @@ struct HeapEntry {
 };
 
 // Main cache class
+
 class HeuristicCache {
-private:
-    std::unordered_map<NodePairKey, double, NodePairHasher> cache;
-    std::priority_queue<HeapEntry, std::vector<HeapEntry>, std::greater<HeapEntry>> minHeap;
-
-public:
-	std::size_t size() const {
-		return cache.size();
-	}
-    void insert(TreeNode* a, void* treeA, TreeNode* b, void* treeB, double h) {
-
-        NodePairKey key(a, treeA, b, treeB);
-        cache[key] = h;
-        minHeap.push({key, h});
-    }
-
-    bool get(TreeNode* a, void* treeA, TreeNode* b, void* treeB, double& outH) const {
-        NodePairKey key(a, treeA, b, treeB);
-        auto it = cache.find(key);
-        if (it != cache.end()) {
-            outH = it->second;
-            return true;
+    private:
+        std::unordered_map<NodePairKey, double, NodePairHasher> cache;
+        std::priority_queue<HeapEntry, std::vector<HeapEntry>, std::greater<HeapEntry>> minHeap;
+        std::unordered_map<void*, std::unordered_set<NodePairKey, NodePairHasher>> treeIndex;
+    
+        void indexTree(void* treeA, void* treeB, const NodePairKey& key) {
+            treeIndex[treeA].insert(key);
+            treeIndex[treeB].insert(key);
         }
-        return false;
-    }
-
-    bool getMin(TreeNode*& outA, void*& outTreeA, TreeNode*& outB, void*& outTreeB, double& outH) {
-        while (!minHeap.empty()) {
-            HeapEntry top = minHeap.top();
-            const NodePairKey& key = top.key;
+    
+        void unindexTree(void* treeA, void* treeB, const NodePairKey& key) {
+            auto erase_key = [&](void* tree) {
+                auto it = treeIndex.find(tree);
+                if (it != treeIndex.end()) {
+                    it->second.erase(key);
+                    if (it->second.empty()) {
+                        treeIndex.erase(it);
+                    }
+                }
+            };
+            erase_key(treeA);
+            erase_key(treeB);
+        }
+    
+    public:
+        std::size_t size() const {
+            return cache.size();
+        }
+    
+        void insert(TreeNode* a, void* treeA, TreeNode* b, void* treeB, double h) {
+            NodePairKey key(a, treeA, b, treeB);
+            if (cache.count(key) == 0 || cache[key] > h) {
+                cache[key] = h;
+                minHeap.push({key, h});
+                indexTree(treeA, treeB, key);
+            }
+        }
+    
+        bool get(TreeNode* a, void* treeA, TreeNode* b, void* treeB, double& outH) const {
+            NodePairKey key(a, treeA, b, treeB);
             auto it = cache.find(key);
-            if (it != cache.end() && it->second == top.heuristic) {
-                outA = key.node1;
-                outTreeA = key.tree1;
-                outB = key.node2;
-                outTreeB = key.tree2;
-                outH = top.heuristic;
+            if (it != cache.end()) {
+                outH = it->second;
                 return true;
             }
-            minHeap.pop(); // stale
+            return false;
         }
-        return false;
-    }
-
-    void remove(TreeNode* a, void* treeA, TreeNode* b, void* treeB) {
-        NodePairKey key(a, treeA, b, treeB);
-        cache.erase(key);
-    }
-	void clear() {
-		cache.clear();
-	
-		// There's no built-in .clear() for priority_queue,
-		// so rebuild with an empty heap
-		minHeap = std::priority_queue<HeapEntry, std::vector<HeapEntry>, std::greater<HeapEntry>>();
-	}
-	void getMinByTree(void *treeA,void *treeB, TreeNode*& a, TreeNode*& b,double& outH) {
-		TreeNode* minA;
-		void* minTreeA;
-		TreeNode* minB;
-		void* minTreeB;
-		double minH;
-		while (getMin(minA, minTreeA, minB, minTreeB, minH)) {
-			if (minTreeA == treeA && minTreeB == treeB) {
-				// minPairs.emplace_back(minA, minB);
-				a = minA;
-				b = minB;
-
-				outH = minH;
-				return;
-			}
-			else if (minTreeA == treeB && minTreeB == treeA) {
-				a = minB;
-				b = minA;
-				outH = minH;
-				return;
-			}
-		}
-		std::cout << "No minimum pairs found for the given trees." << std::endl;
-	}
-};
+    
+        bool getMin(TreeNode*& outA, void*& outTreeA, TreeNode*& outB, void*& outTreeB, double& outH) {
+            while (!minHeap.empty()) {
+                const HeapEntry& top = minHeap.top();
+                const NodePairKey& key = top.key;
+                auto it = cache.find(key);
+                if (it != cache.end() && it->second == top.heuristic) {
+                    outA = key.node1;
+                    outTreeA = key.tree1;
+                    outB = key.node2;
+                    outTreeB = key.tree2;
+                    outH = top.heuristic;
+                    return true;
+                }
+                minHeap.pop();
+            }
+            return false;
+        }
+    
+        void remove(TreeNode* a, void* treeA, TreeNode* b, void* treeB) {
+            NodePairKey key(a, treeA, b, treeB);
+            cache.erase(key);
+            unindexTree(treeA, treeB, key);
+        }
+    
+        void clear() {
+            cache.clear();
+            treeIndex.clear();
+            minHeap = decltype(minHeap)();
+        }
+    
+        bool getMinByTree(void* treeA, void* treeB, TreeNode*& a, TreeNode*& b, double& outH) {
+            TreeNode *minA, *minB;
+            void *minTreeA, *minTreeB;
+            double minH;
+            while (getMin(minA, minTreeA, minB, minTreeB, minH)) {
+                if ((minTreeA == treeA && minTreeB == treeB) || (minTreeA == treeB && minTreeB == treeA)) {
+                    bool is_direct = (minTreeA == treeA);
+                    a = is_direct ? minA : minB;
+                    b = is_direct ? minB : minA;
+                    outH = minH;
+                    return true;
+                }
+            }
+            a = b = nullptr;
+            outH = std::numeric_limits<double>::infinity();
+            return false;
+        }
+    
+        bool popMinByTree(void* treeA, void* treeB, TreeNode*& outA, TreeNode*& outB, double& outH) {
+            while (!minHeap.empty()) {
+                const HeapEntry& top = minHeap.top();
+                const NodePairKey& key = top.key;
+                auto it = cache.find(key);
+                if (it == cache.end() || it->second != top.heuristic) {
+                    minHeap.pop();
+                    continue;
+                }
+                if ((key.tree1 == treeA && key.tree2 == treeB) || (key.tree1 == treeB && key.tree2 == treeA)) {
+                    bool is_direct = (key.tree1 == treeA);
+                    outA = is_direct ? key.node1 : key.node2;
+                    outB = is_direct ? key.node2 : key.node1;
+                    outH = top.heuristic;
+                    cache.erase(key);
+                    minHeap.pop();
+                    unindexTree(key.tree1, key.tree2, key);
+                    return true;
+                }
+                minHeap.pop();
+            }
+            outA = outB = nullptr;
+            outH = std::numeric_limits<double>::infinity();
+            return false;
+        }
+    };
 #endif

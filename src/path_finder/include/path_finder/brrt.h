@@ -116,6 +116,10 @@ namespace path_plan
     void set_test_param(double steer_length){
       steer_length_ = steer_length;
     }
+    double get_final_path_use_time_()
+    {
+      return final_path_use_time_;
+    }
   private:
     // nodehandle params
     ros::NodeHandle nh_;
@@ -282,10 +286,6 @@ namespace path_plan
         Eigen::Vector3d x_rand;
         sampler_.samplingOnce(x_rand);
         // samplingOnce(x_rand);
-        while (!map_ptr_->isStateValid(x_rand))
-        {
-          sampler_.samplingOnce(x_rand);
-        }
 
         /* request nearest node in treeA */
         struct kdres *p_nearestA = kd_nearest3(treeA, x_rand[0], x_rand[1], x_rand[2]);
@@ -360,7 +360,9 @@ namespace path_plan
             solution_cost_time_pair_list_.emplace_back(path_cost, (ros::Time::now() - rrt_start_time).toSec());
             cost_best_ = path_cost;
           }
-          // std::cout << "[BRRT]**********find path after " << number_of_iterations_ << " iterations" << std::endl;
+          #ifdef DEBUG
+          std::cout << "[BRRT]**********find path after " << number_of_iterations_ << " iterations" << std::endl;
+          #endif
           break;
         }
         // visualizeWholeTree();
@@ -368,8 +370,10 @@ namespace path_plan
         std::swap(treeA, treeB);
         path_reverse = !path_reverse;
       }//End of sampling iteration
-      
-      // visualizeWholeTree();
+#ifdef DEBUG
+      visualizeWholeTree();
+#endif
+      final_path_use_time_ = (ros::Time::now() - rrt_start_time).toSec();
       if (tree_connected)
       {
         final_path_use_time_ = (ros::Time::now() - rrt_start_time).toSec();
@@ -378,15 +382,19 @@ namespace path_plan
         final_path_ = path_list_.back();
         
       }
-      // else if (valid_tree_node_nums_ == max_tree_node_nums_)
-      // {
-      //   // visualizeWholeTree();
-      //   ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << max_tree_node_nums_ << " nodes added to rrt-tree");
-      // }
-      // else
-      // {
-      //   ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << (ros::Time::now() - rrt_start_time).toSec() << " seconds");
-      // }
+#ifdef DEBUG
+      else if (valid_tree_node_nums_ == max_tree_node_nums_)
+      {
+
+        // visualizeWholeTree();
+        ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << max_tree_node_nums_ << " nodes added to rrt-tree" << " number_of_iterations_ " <<  number_of_iterations_ );
+      }
+      else
+      {
+
+        ROS_ERROR_STREAM("[BRRT]: NOT CONNECTED TO GOAL after " << (ros::Time::now() - rrt_start_time).toSec() << " seconds"<< " number_of_iterations_ " <<  number_of_iterations_ ) ;
+      }
+#endif
       return tree_connected;
     }
 

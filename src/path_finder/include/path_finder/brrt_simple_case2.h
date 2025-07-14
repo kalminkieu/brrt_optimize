@@ -121,7 +121,10 @@ namespace path_plan
     {
       return valid_tree_node_nums_;
     }
-
+    double get_final_path_use_time_()
+    {
+      return final_path_use_time_;
+    }
   private:
     // nodehandle params
     ros::NodeHandle nh_;
@@ -289,7 +292,9 @@ namespace path_plan
       // Iterate through all nodes in treeA
 
       // Find the nearest node in treeB to the current node in treeA
-      struct kdres *nodesB = kd_nearest_range3(treeB, nodeSi->x[0], nodeSi->x[1], nodeSi->x[2], DBL_MAX);
+      // struct kdres *nodesB = kd_nearest_range3(treeB, nodeSi->x[0], nodeSi->x[1], nodeSi->x[2], DBL_MAX);
+      struct kdres *nodesB = kd_nearest_n(treeB, nodeSi->x.data(), 30);
+      // std::cout << "size of nodesB: " << kd_res_size(nodesB) << std::endl;
       while (!kd_res_end(nodesB))
       {
         RRTNode3DPtr nodeGi = (RRTNode3DPtr)kd_res_item_data(nodesB);
@@ -509,7 +514,6 @@ namespace path_plan
           kd_res_free(p_nearestB);
         }
 
-        // Extend Node A by steer
         double dist_from_A = nearest_nodeA->cost_from_start + steer_length_;
         RRTNode3DPtr new_nodeA(nullptr);
         if (valid_tree_node_nums_ + 1 >= max_tree_node_nums_)
@@ -542,8 +546,8 @@ namespace path_plan
             new_nodeB = addTreeNode(new_nodeB, x_connect, new_nodeB->cost_from_start + steer_length_, steer_length_);
 
             kd_insert3(treeB, x_connect[0], x_connect[1], x_connect[2], new_nodeB);
-            update_cache_nearest_heuristic(new_nodeB,treeB,treeA);
           }
+          update_cache_nearest_heuristic(new_nodeB,treeB,treeA);
         }
 
         /* If connected, trace the connected path */
@@ -575,13 +579,12 @@ namespace path_plan
         }
 
 #ifdef DEBUG
-        std::cout << "[BRRT_Optimize] Iteration " << number_of_iterations_ << " completed, tree size: " << valid_tree_node_nums_ << std::endl;
         visualizeWholeTree();
 
         vis_ptr_->visualize_a_ball(x_new, 0.5, "/brrt_optimize/x_new", visualization::Color::green);
         vis_ptr_->visualize_a_ball(nearest_nodeA->x, 0.5, "/brrt_optimize/nearest_nodeA", visualization::Color::black);
         vis_ptr_->visualize_a_ball(nearest_nodeB->x, 0.5, "/brrt_optimize/nearest_nodeB", visualization::Color::white);
-        usleep(50000); // Sleep for 0.1 seconds to visualize the tree growth
+        usleep(500000); // Sleep for 0.1 seconds to visualize the tree growth
 #endif
 
         /* Swap treeA&B */
@@ -590,9 +593,9 @@ namespace path_plan
 #ifdef DEBUG
       visualizeWholeTree();
 #endif
+      final_path_use_time_ = (ros::Time::now() - rrt_start_time).toSec();
       if (tree_connected)
       {
-        final_path_use_time_ = (ros::Time::now() - rrt_start_time).toSec();
 
 #ifdef DEBUG
         ROS_INFO_STREAM("[BRRT_Optimize]: find_path_use_time: " << solution_cost_time_pair_list_.front().second << ", length: " << solution_cost_time_pair_list_.front().first);

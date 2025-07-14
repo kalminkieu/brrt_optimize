@@ -590,9 +590,10 @@ namespace path_plan
 #ifdef DEBUG
       visualizeWholeTree();
 #endif
+      final_path_use_time_ = (ros::Time::now() - rrt_start_time).toSec();
       if (tree_connected)
       {
-        final_path_use_time_ = (ros::Time::now() - rrt_start_time).toSec();
+        
 
 #ifdef DEBUG
         ROS_INFO_STREAM("[BRRT_Optimize]: find_path_use_time: " << solution_cost_time_pair_list_.front().second << ", length: " << solution_cost_time_pair_list_.front().first);

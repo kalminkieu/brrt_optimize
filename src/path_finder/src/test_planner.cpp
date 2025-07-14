@@ -34,7 +34,7 @@ OF SUCH DAMAGE.
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 
-#define NUMBER_TEST_TIMES 1000
+#define NUMBER_TEST_TIMES 500
 class TesterPathFinder
 {
 private:
@@ -113,7 +113,7 @@ public:
         brrt_simple_case2_ptr_->setVisualizer(vis_ptr_);
         vis_ptr_->registe<nav_msgs::Path>("brrt_simple_case2_final_path");
         vis_ptr_->registe<sensor_msgs::PointCloud2>("brrt_simple_case2_final_wpts");
-
+        goal_ = get_sample_valid();
         goal_sub_ = nh_.subscribe("/goal", 1, &TesterPathFinder::goalCallback, this);
         execution_timer_ = nh_.createTimer(ros::Duration(1), &TesterPathFinder::executionCallback, this);
         rcv_glb_obs_client_ = nh_.serviceClient<self_msgs_and_srvs::GlbObsRcv>("/pub_glb_obs");
@@ -238,24 +238,24 @@ public:
             //     vector<std::pair<double, double>> slns = brrt_optimize_ptr_->getSolutions();
             //     ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
             // }
-            // bool brrt_optimize_res = brrt_simple_case1_ptr_->plan(start_, goal_);
-            // if (brrt_optimize_res)
-            // {
-            //     vector<Eigen::Vector3d> final_path = brrt_simple_case1_ptr_->getPath();
-            //     vis_ptr_->visualize_path(final_path, "brrt_optimize_final_path");
-            //     vis_ptr_->visualize_pointcloud(final_path, "brrt_optimize_final_wpts");
-            //     vector<std::pair<double, double>> slns = brrt_simple_case1_ptr_->getSolutions();
-            //     ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
-            // }
-            bool brrt_optimize_res = brrt_simple_case2_ptr_->plan(start_, goal_);
+            bool brrt_optimize_res = brrt_simple_case1_ptr_->plan(start_, goal_);
             if (brrt_optimize_res)
             {
-                vector<Eigen::Vector3d> final_path = brrt_simple_case2_ptr_->getPath();
+                vector<Eigen::Vector3d> final_path = brrt_simple_case1_ptr_->getPath();
                 vis_ptr_->visualize_path(final_path, "brrt_optimize_final_path");
                 vis_ptr_->visualize_pointcloud(final_path, "brrt_optimize_final_wpts");
-                vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
+                vector<std::pair<double, double>> slns = brrt_simple_case1_ptr_->getSolutions();
                 ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
             }
+            // bool brrt_optimize_res = brrt_simple_case2_ptr_->plan(start_, goal_);
+            // if (brrt_optimize_res)
+            // {
+            //     vector<Eigen::Vector3d> final_path = brrt_simple_case2_ptr_->getPath();
+            //     vis_ptr_->visualize_path(final_path, "brrt_optimize_final_path");
+            //     vis_ptr_->visualize_pointcloud(final_path, "brrt_optimize_final_wpts");
+            //     vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
+            //     ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
+            // }
         }
 
         start_ = goal_;
@@ -300,19 +300,15 @@ public:
     {
         start_ = get_sample_valid();
         const auto &input = manager->get_input();
+        
         ROS_INFO("Running Test %d", input.trial);
         for (int i = 0; i < NUMBER_TEST_TIMES; ++i)
         {
+            ROS_INFO("Running Test %d of %d", i + 1, NUMBER_TEST_TIMES);
 
-
-            Eigen::Vector3d goal = get_sample_valid();
-            // if (manager->current_run_index() > NUMBER_TEST_TIMES) {
-            //
-            //     return;
-            // }
-            
-            
-
+            goal_ = get_sample_valid();
+            print_vector3d("start", start_);
+            print_vector3d("goal", goal_);
             std::map<std::string, AlgoResult> algo_outputs;
 
             // Simulate BRRT
@@ -327,7 +323,9 @@ public:
             }
             else
             {
-                algo_outputs["BRRT"] = {false, 0.0, 0.0, 0, 0, start_, goal_};
+                int num_nodes = brrt_ptr_->get_valid_tree_node_nums();
+                int num_iterations = brrt_ptr_->get_number_of_iteration();
+                algo_outputs["BRRT"] = {false, brrt_ptr_->get_final_path_use_time_(), DBL_MAX, num_nodes, num_iterations, start_, goal_};
             }
             // Simulate BRRT Optimize
             brrt_simple_case1_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
@@ -341,21 +339,25 @@ public:
             }
             else
             {
-                algo_outputs["BRRT_Case1"] = {false, 0.0, 0.0, 0, 0, start_, goal_};
+                int num_nodes = brrt_simple_case1_ptr_->get_valid_tree_node_nums();
+                int num_iterations = brrt_simple_case1_ptr_->get_number_of_iteration();
+                algo_outputs["BRRT_Case1"] = {false, brrt_simple_case1_ptr_->get_final_path_use_time_(), DBL_MAX, num_nodes, num_iterations, start_, goal_};
             }
-            brrt_simple_case2_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
-            bool brrt_simple_case2_res = brrt_simple_case2_ptr_->plan(start_, goal_);
-            if (brrt_simple_case2_res)
-            {
-                vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
-                int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
-                int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
-                algo_outputs["BRRT_Case2"] = {true, slns.back().second, slns.back().first, num_nodes, num_iterations, start_, goal_};
-            }
-            else
-            {
-                algo_outputs["BRRT_Case2"] = {false, 0.0, 0.0, 0, 0, start_, goal_};
-            }
+            // brrt_simple_case2_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
+            // bool brrt_simple_case2_res = brrt_simple_case2_ptr_->plan(start_, goal_);
+            // if (brrt_simple_case2_res)
+            // {
+            //     vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
+            //     int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
+            //     int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
+            //     algo_outputs["BRRT_Case2"] = {true, slns.back().second, slns.back().first, num_nodes, num_iterations, start_, goal_};
+            // }
+            // else
+            // {
+            //     int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
+            //     int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
+            //     algo_outputs["BRRT_Case2"] = {false, brrt_simple_case1_ptr_->get_final_path_use_time_(), DBL_MAX, num_nodes, num_iterations, start_, goal_};
+            // }
             // brrt_optimize_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
             // bool brrt_optimize_res = brrt_optimize_ptr_->plan(start_, goal_);
             // if (brrt_optimize_res)
@@ -369,7 +371,7 @@ public:
             // {
             //     algo_outputs["BRRT_Optimize"] = {false, 0.0, 0.0, 0, 0, start_, goal_};
             // }
-            start_ = goal;
+            start_ = goal_;
             // std::cout << "Run " << i + 1 << " completed." << std::endl;
             manager->store_output_for_run(algo_outputs);
         }

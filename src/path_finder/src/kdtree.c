@@ -920,3 +920,91 @@ static void clear_results(struct kdres *rset)
 
     rset->rlist->next = 0;
 }
+
+
+static int heap_insert_max(struct res_node **heap, int *heap_size, int k, struct kdnode *item, double dist_sq) {
+    int i, max_idx = 0;
+
+    if (*heap_size < k) {
+        struct res_node *new_node = alloc_resnode();
+        new_node->item = item;
+        new_node->dist_sq = dist_sq;
+        heap[(*heap_size)++] = new_node;
+        return 1;
+    }
+
+    for (i = 1; i < *heap_size; i++) {
+        if (heap[i]->dist_sq > heap[max_idx]->dist_sq) {
+            max_idx = i;
+        }
+    }
+
+    if (heap[max_idx]->dist_sq > dist_sq) {
+        free_resnode(heap[max_idx]);
+        struct res_node *new_node = alloc_resnode();
+        new_node->item = item;
+        new_node->dist_sq = dist_sq;
+        heap[max_idx] = new_node;
+        return 1;
+    }
+    return 0;
+}
+
+static void find_n_nearest(struct kdnode *node, const double *pos, int dim, int k,
+                           struct res_node **heap, int *heap_size) {
+    if (!node) return;
+
+    double dist_sq = 0.0;
+    for (int i = 0; i < dim; i++) {
+        dist_sq += SQ(pos[i] - node->pos[i]);
+    }
+
+    heap_insert_max(heap, heap_size, k, node, dist_sq);
+
+    double dx = pos[node->dir] - node->pos[node->dir];
+    struct kdnode *nearer = dx <= 0 ? node->left : node->right;
+    struct kdnode *farther = dx <= 0 ? node->right : node->left;
+
+    find_n_nearest(nearer, pos, dim, k, heap, heap_size);
+
+    if (*heap_size < k || SQ(dx) < heap[0]->dist_sq) {
+        find_n_nearest(farther, pos, dim, k, heap, heap_size);
+    }
+}
+
+struct kdres *kd_nearest_n(struct kdtree *tree, const double *pos, int k) {
+    if (!tree || !tree->root || k <= 0) return 0;
+
+    struct kdres *rset = malloc(sizeof *rset);
+    if (!rset) return 0;
+
+    rset->tree = tree;
+    rset->rlist = alloc_resnode(); // dummy head
+    rset->rlist->next = 0;
+
+    struct res_node **heap = malloc(k * sizeof(struct res_node *));
+    int heap_size = 0;
+
+    find_n_nearest(tree->root, pos, tree->dim, k, heap, &heap_size);
+
+    // Sort heap by dist_sq ascending
+    for (int i = 0; i < heap_size - 1; i++) {
+        for (int j = i + 1; j < heap_size; j++) {
+            if (heap[i]->dist_sq > heap[j]->dist_sq) {
+                struct res_node *tmp = heap[i];
+                heap[i] = heap[j];
+                heap[j] = tmp;
+            }
+        }
+    }
+
+    for (int i = 0; i < heap_size; i++) {
+        heap[i]->next = rset->rlist->next;
+        rset->rlist->next = heap[i];
+    }
+
+    rset->size = heap_size;
+    kd_res_rewind(rset);
+    free(heap);
+    return rset;
+}

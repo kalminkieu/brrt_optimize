@@ -58,11 +58,74 @@ pcl::search::KdTree<pcl::PointXYZ> kdtreeMap;
 vector<int> pointIdxSearch;
 vector<float> pointSquaredDistance;
 
+void RandomBRRTGenerate_Large(double size = 4)
+{
+   pcl::PointXYZ pt_random;
+   random_device rd;
+   default_random_engine eng(rd());
+   float ramdom_ratio = 0.3;
+   int number_ostacle = (_x_h - _x_l) * (_y_h - _y_l) / (size * size) * ramdom_ratio;
+   std::cout << "number of ostacle" << number_ostacle;
+
+   std::mt19937 gen(rd()); // seed the generator
+
+   // Create distribution in range [a, b]
+   std::uniform_real_distribution<> dis_x(_x_l, _x_h);
+   std::uniform_real_distribution<> dis_y(_y_l, _y_h);
+   // Generate a random number
+   double half_size = size / 2;
+   for (int i = 0; i < number_ostacle; i++)
+   {
+      double random_x = dis_x(gen);
+      double random_y = dis_y(gen);
+      for (double i_x = random_x - half_size; i_x < random_x + half_size; i_x += 0.5)
+         for (double i_y = random_y - half_size; i_y < random_y + half_size; i_y += 0.5)
+         for (float k = -1; k < _h_h; k+=0.5)
+         {
+            pt_random.x = i_x;
+            pt_random.y = i_y;
+            pt_random.z = k;
+            cloudMap.points.push_back(pt_random);
+         }
+   }
+
+   // pcl::PointXYZ pt_random;
+   // std::cout<<"size of map" << _x_l << " " << _x_h << " " << _y_l << " " << _y_h <<" " << _h_h <<std::endl;
+   // // generate  1000 points random with size 4
+   // for (float i = _x_l; i < _x_h; i += size)
+   // {
+   //    for (float j = _y_l; j < _y_h; j += size)
+   //    {
+   //       // get a random number between 0 and 1
+   //       float random_num = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+   //       if (random_num < ramdom_ratio)
+   //       {
+   //          for (float k = -1; k < _h_h; k += size)
+   //          {
+   //             pt_random.x = i;
+   //             pt_random.y = j;
+   //             pt_random.z = k;
+   //             cloudMap.points.push_back(pt_random);
+   //          }
+   //       }
+   //    }
+   // }
+
+   cloudMap.width = cloudMap.points.size();
+   cloudMap.height = 1;
+   cloudMap.is_dense = true;
+   std::cout << "cloudMap.points.size() = " << cloudMap.points.size() << std::endl;
+   _has_map = true;
+
+   pcl::toROSMsg(cloudMap, globalMap_pcd);
+   globalMap_pcd.header.frame_id = "map";
+}
+
 void RandomBRRTGenerate()
 {
    random_device rd;
    default_random_engine eng(rd());
-   float ramdom_ratio = 0.2;
+   float ramdom_ratio = 0.8;
 
    pcl::PointXYZ pt_random;
    std::cout<<"size of map" << _x_l << " " << _x_h << " " << _y_l << " " << _y_h <<" " << _h_h <<std::endl;
@@ -101,12 +164,11 @@ void RandomNarrowGenerate()
    default_random_engine eng(rd());
    float t_y_l;
    float t_y_h;
-   
 
    pcl::PointXYZ pt_random;
    int escape = 4;
    int step = 0;
-   for (int i = int(_x_l); i < int(_x_h); i+=escape)
+   for (int i = int(_x_l); i < int(_x_h); i += escape)
    {
       if (step % 2 == 0)
       {
@@ -115,13 +177,13 @@ void RandomNarrowGenerate()
       }
       else
       {
-         t_y_l = _y_l+ escape;
+         t_y_l = _y_l + escape;
          t_y_h = _y_h;
       }
-      step ++;
-      for (float j = t_y_l; j < t_y_h; j+=0.5)
+      step++;
+      for (float j = t_y_l; j < t_y_h; j += 0.5)
       {
-         for (float k = -1; k < _h_h; k+=0.5)
+         for (float k = -1; k < _h_h; k += 0.5)
          {
             pt_random.x = i;
             pt_random.y = j;
@@ -134,7 +196,6 @@ void RandomNarrowGenerate()
          // cloudMap.points.push_back(pt_random);
       }
    }
-   
 
    cloudMap.width = cloudMap.points.size();
    cloudMap.height = 1;
@@ -145,7 +206,6 @@ void RandomNarrowGenerate()
    pcl::toROSMsg(cloudMap, globalMap_pcd);
    globalMap_pcd.header.frame_id = "map";
 }
-
 
 void RandomMapGenerate()
 {
@@ -171,7 +231,7 @@ void RandomMapGenerate()
 
    pcl::PointXYZ pt_random;
 
-   int base2(2), base3(3), base4(4); //Halton base
+   int base2(2), base3(3), base4(4); // Halton base
    // firstly, we put some circles
    for (int i = 0; i < _cir_num; i++)
    {
@@ -182,7 +242,7 @@ void RandomMapGenerate()
       // y0 = rand_y_circle(eng);
       z0 = rand_h(eng);
 
-      //Halton sequence for x(0, 1)
+      // Halton sequence for x(0, 1)
       double f = 1;
       x0 = 0;
       int ii = i;
@@ -195,7 +255,7 @@ void RandomMapGenerate()
       x0 *= _x_size;
       x0 -= _x_size / 2;
 
-      //Halton sequence for y(0, 1)
+      // Halton sequence for y(0, 1)
       f = 1;
       y0 = 0;
       ii = i;
@@ -276,7 +336,7 @@ void RandomMapGenerate()
       // y    = rand_y(eng);
       w = rand_w(eng);
 
-      //Halton sequence for x(0, 1)
+      // Halton sequence for x(0, 1)
       double f = 1;
       x = 0;
       int ii = i;
@@ -289,7 +349,7 @@ void RandomMapGenerate()
       x *= _x_size;
       x -= _x_size / 2;
 
-      //Halton sequence for y(0, 1)
+      // Halton sequence for y(0, 1)
       f = 1;
       y = 0;
       ii = i;
@@ -416,8 +476,8 @@ int main(int argc, char **argv)
 
    // RandomMapGenerate();
    // RandomNarrowGenerate();
-   RandomBRRTGenerate();
-   //only pub map pointcloud on request
+   RandomBRRTGenerate_Large();
+   // only pub map pointcloud on request
    ros::ServiceServer pub_glb_obs_service = n.advertiseService("/pub_glb_obs", pubGlbObs);
    ros::spin();
 
