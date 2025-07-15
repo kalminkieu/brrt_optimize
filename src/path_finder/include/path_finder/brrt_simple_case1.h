@@ -542,12 +542,12 @@ namespace path_plan
         }
 
 #ifdef DEBUG
-        visualizeWholeTree();
+        // visualizeWholeTree();
 
-        vis_ptr_->visualize_a_ball(x_new, 0.5, "/brrt_optimize/x_new", visualization::Color::green);
-        vis_ptr_->visualize_a_ball(nearest_nodeA->x, 0.5, "/brrt_optimize/nearest_nodeA", visualization::Color::black);
-        vis_ptr_->visualize_a_ball(nearest_nodeB->x, 0.5, "/brrt_optimize/nearest_nodeB", visualization::Color::white);
-        usleep(50000); // Sleep for 0.1 seconds to visualize the tree growth
+        // vis_ptr_->visualize_a_ball(x_new, 0.5, "/brrt_optimize/x_new", visualization::Color::green);
+        // vis_ptr_->visualize_a_ball(nearest_nodeA->x, 0.5, "/brrt_optimize/nearest_nodeA", visualization::Color::black);
+        // vis_ptr_->visualize_a_ball(nearest_nodeB->x, 0.5, "/brrt_optimize/nearest_nodeB", visualization::Color::white);
+        // usleep(50000); // Sleep for 0.1 seconds to visualize the tree growth
 #endif
 
         /* Swap treeA&B */
@@ -602,8 +602,8 @@ namespace path_plan
         node_p.center = vertice[i];
         tree_nodes.push_back(node_p);
       }
-      vis_ptr_->visualize_balls(tree_nodes, "tree_vertice", visualization::Color::blue, 1.0);
-      vis_ptr_->visualize_pairline(edges, "tree_edges", visualization::Color::red, 0.06);
+      vis_ptr_->visualize_balls(tree_nodes, "tree_vertice", visualization::Color::red, 0.5);
+      vis_ptr_->visualize_pairline(edges, "tree_edges", visualization::Color::red, 0.05);
     }
 
     void sampleWholeTree(const RRTNode3DPtr &root, vector<Eigen::Vector3d> &vertice, vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> &edges)
