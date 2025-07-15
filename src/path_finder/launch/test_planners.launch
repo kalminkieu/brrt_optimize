@@ -31,7 +31,7 @@
   <arg name="brrt_alpha" value="7.0" />
   <arg name="brrt_beta" value="2.0" />
   <arg name="brrt_gamma" value="2.0" />
-  <arg name="brrt_max_iteration" value="200000" />
+  <arg name="brrt_max_iteration" value="100000" />
 
   <arg name="input_param" default="/home/x/Develop/brrt_optimize/brrt_input.json" />
   <arg name="output_result" default="/home/x/Develop/evaluation/20250705/" />

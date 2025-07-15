@@ -343,21 +343,21 @@ public:
                 int num_iterations = brrt_simple_case1_ptr_->get_number_of_iteration();
                 algo_outputs["BRRT_Case1"] = {false, brrt_simple_case1_ptr_->get_final_path_use_time_(), DBL_MAX, num_nodes, num_iterations, start_, goal_};
             }
-            // brrt_simple_case2_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
-            // bool brrt_simple_case2_res = brrt_simple_case2_ptr_->plan(start_, goal_);
-            // if (brrt_simple_case2_res)
-            // {
-            //     vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
-            //     int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
-            //     int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
-            //     algo_outputs["BRRT_Case2"] = {true, slns.back().second, slns.back().first, num_nodes, num_iterations, start_, goal_};
-            // }
-            // else
-            // {
-            //     int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
-            //     int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
-            //     algo_outputs["BRRT_Case2"] = {false, brrt_simple_case1_ptr_->get_final_path_use_time_(), DBL_MAX, num_nodes, num_iterations, start_, goal_};
-            // }
+            brrt_simple_case2_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
+            bool brrt_simple_case2_res = brrt_simple_case2_ptr_->plan(start_, goal_);
+            if (brrt_simple_case2_res)
+            {
+                vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
+                int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
+                int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
+                algo_outputs["BRRT_Case2"] = {true, slns.back().second, slns.back().first, num_nodes, num_iterations, start_, goal_};
+            }
+            else
+            {
+                int num_nodes = brrt_simple_case2_ptr_->get_valid_tree_node_nums();
+                int num_iterations = brrt_simple_case2_ptr_->get_number_of_iteration();
+                algo_outputs["BRRT_Case2"] = {false, brrt_simple_case1_ptr_->get_final_path_use_time_(), DBL_MAX, num_nodes, num_iterations, start_, goal_};
+            }
             // brrt_optimize_ptr_->set_heuristic_param(input.p1, input.u_p, input.alpha, input.beta, input.gamma,input.epsilon);
             // bool brrt_optimize_res = brrt_optimize_ptr_->plan(start_, goal_);
             // if (brrt_optimize_res)
