@@ -414,8 +414,8 @@ namespace path_plan
           node_p.center = vertice[i];
           tree_nodes.push_back(node_p);
         }
-        vis_ptr_->visualize_balls(tree_nodes, "brrt/tree_vertice", visualization::Color::blue, 0.5);
-        vis_ptr_->visualize_pairline(edges, "brrt/tree_edges", visualization::Color::blue, 0.05);
+        vis_ptr_->visualize_balls(tree_nodes, "brrt/tree_vertice", visualization::Color::white, 0.5);
+        vis_ptr_->visualize_pairline(edges, "brrt/tree_edges", visualization::Color::white, 0.05);
     }
 
     void sampleWholeTree(const RRTNode3DPtr &root, vector<Eigen::Vector3d> &vertice, vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> &edges)

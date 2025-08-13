@@ -106,13 +106,13 @@ public:
 
         brrt_simple_case1_ptr_ = std::make_shared<path_plan::BRRT_Simple_Case1>(nh_, env_ptr_);
         brrt_simple_case1_ptr_->setVisualizer(vis_ptr_);
-        vis_ptr_->registe<nav_msgs::Path>("brrt_simple_case1_final_path");
-        vis_ptr_->registe<sensor_msgs::PointCloud2>("brrt_simple_case1_final_wpts");
+        vis_ptr_->registe<nav_msgs::Path>("brrt_case1_final_path");
+        vis_ptr_->registe<sensor_msgs::PointCloud2>("brrt_case1_final_wpts");
 
         brrt_simple_case2_ptr_ = std::make_shared<path_plan::BRRT_Simple_Case2>(nh_, env_ptr_);
         brrt_simple_case2_ptr_->setVisualizer(vis_ptr_);
-        vis_ptr_->registe<nav_msgs::Path>("brrt_simple_case2_final_path");
-        vis_ptr_->registe<sensor_msgs::PointCloud2>("brrt_simple_case2_final_wpts");
+        vis_ptr_->registe<nav_msgs::Path>("brrt_case2_final_path");
+        vis_ptr_->registe<sensor_msgs::PointCloud2>("brrt_case2_final_wpts");
         goal_ = get_sample_valid();
         goal_sub_ = nh_.subscribe("/goal", 1, &TesterPathFinder::goalCallback, this);
         execution_timer_ = nh_.createTimer(ros::Duration(1), &TesterPathFinder::executionCallback, this);
@@ -238,24 +238,24 @@ public:
             //     vector<std::pair<double, double>> slns = brrt_optimize_ptr_->getSolutions();
             //     ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
             // }
-            bool brrt_optimize_res = brrt_simple_case1_ptr_->plan(start_, goal_);
-            if (brrt_optimize_res)
+            bool brrt_optimize_case1_res = brrt_simple_case1_ptr_->plan(start_, goal_);
+            if (brrt_optimize_case1_res)
             {
                 vector<Eigen::Vector3d> final_path = brrt_simple_case1_ptr_->getPath();
-                vis_ptr_->visualize_path(final_path, "brrt_optimize_final_path");
-                vis_ptr_->visualize_pointcloud(final_path, "brrt_optimize_final_wpts");
+                vis_ptr_->visualize_path(final_path, "brrt_case1_final_path");
+                vis_ptr_->visualize_pointcloud(final_path, "brrt_case1_final_wpts");
                 vector<std::pair<double, double>> slns = brrt_simple_case1_ptr_->getSolutions();
                 ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
             }
-            // bool brrt_optimize_res = brrt_simple_case2_ptr_->plan(start_, goal_);
-            // if (brrt_optimize_res)
-            // {
-            //     vector<Eigen::Vector3d> final_path = brrt_simple_case2_ptr_->getPath();
-            //     vis_ptr_->visualize_path(final_path, "brrt_optimize_final_path");
-            //     vis_ptr_->visualize_pointcloud(final_path, "brrt_optimize_final_wpts");
-            //     vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
-            //     ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
-            // }
+            bool brrt_optimize_case2_res = brrt_simple_case2_ptr_->plan(start_, goal_);
+            if (brrt_optimize_case2_res)
+            {
+                vector<Eigen::Vector3d> final_path = brrt_simple_case2_ptr_->getPath();
+                vis_ptr_->visualize_path(final_path, "brrt_case2_final_path");
+                vis_ptr_->visualize_pointcloud(final_path, "brrt_case2_final_wpts");
+                vector<std::pair<double, double>> slns = brrt_simple_case2_ptr_->getSolutions();
+                ROS_INFO_STREAM("[BRRTOpitmize*] final path len: " << slns.back().first);
+            }
         }
 
         start_ = goal_;

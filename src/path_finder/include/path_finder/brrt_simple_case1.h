@@ -26,7 +26,7 @@ OF SUCH DAMAGE.
 #include "sampler.h"
 #include "node.h"
 #include "kdtree.h"
-
+#include "custom_logger.h"
 #include <ros/ros.h>
 #include <utility>
 #include <queue>
@@ -53,9 +53,9 @@ namespace path_plan
       nh_.param("BRRT_Optimize/max_iteration", max_iteration_, 0);
       nh_.param("BRRT_Optimize/enable2d", brrt_enable_2d, true);
 
-      ROS_WARN_STREAM("[BRRT_Optimize] param: steer_length: " << steer_length_);
-      ROS_WARN_STREAM("[BRRT_Optimize] param: search_time: " << search_time_);
-      ROS_WARN_STREAM("[BRRT_Optimize] param: max_tree_node_nums: " << max_tree_node_nums_);
+      ROS_WARN_STREAM("[BRRT_Optimize_case1] param: steer_length: " << steer_length_);
+      ROS_WARN_STREAM("[BRRT_Optimize_case1] param: search_time: " << search_time_);
+      ROS_WARN_STREAM("[BRRT_Optimize_case1] param: max_tree_node_nums: " << max_tree_node_nums_);
 
       sampler_.setSamplingRange(mapPtr->getOrigin(), mapPtr->getMapSize());
 
@@ -379,6 +379,7 @@ namespace path_plan
     }
     bool brrt_optimize(const Eigen::Vector3d &s, const Eigen::Vector3d &g)
     {
+      CustomLogger logger("/home/x/brrt_optimize/logger_time.txt");
       ros::Time rrt_start_time = ros::Time::now();
       bool tree_connected = false;
       bool path_reverse = false;
@@ -404,12 +405,11 @@ namespace path_plan
       /* main loop */
       number_of_iterations_ = 0;
      
-#ifdef DEBUG
-      std::cout << "[BRRT_Optimize] Start sampling..." << std::endl;
-#endif
+
       cache.insert(start_node_, treeA, goal_node_, treeB, h_start_goal); // insert start and goal node to cache
+
       for (number_of_iterations_ = 0; number_of_iterations_ < max_iteration_; ++number_of_iterations_)
-      {
+      {    
         /* random sampling */
         Eigen::Vector3d x_rand = get_sample_valid();
         Eigen::Vector3d x_new;
@@ -448,9 +448,6 @@ namespace path_plan
 
           if (p_nearestA == nullptr)
           {
-#ifdef DEBUG
-            ROS_ERROR("nearest query error");
-#endif
             continue;
           }
           nearest_nodeA = (RRTNode3DPtr)kd_res_item_data(p_nearestA);
@@ -466,9 +463,6 @@ namespace path_plan
           p_nearestB = kd_nearest3(treeB, x_new[0], x_new[1], x_new[2]);
           if (p_nearestB == nullptr)
           {
-#ifdef DEBUG
-            ROS_ERROR("nearest query error");
-#endif
             continue;
           }
           nearest_nodeB = (RRTNode3DPtr)kd_res_item_data(p_nearestB);
@@ -530,9 +524,6 @@ namespace path_plan
             solution_cost_time_pair_list_.emplace_back(path_cost, (ros::Time::now() - rrt_start_time).toSec());
             cost_best_ = path_cost;
           }
-#ifdef DEBUG
-          std::cout << "[BRRT_Optimize]**********Find path after " << number_of_iterations_ << " iterations" << std::endl;
-#endif
           break;
         }
         else
@@ -541,14 +532,7 @@ namespace path_plan
           path_reverse = !path_reverse;
         }
 
-#ifdef DEBUG
-        // visualizeWholeTree();
 
-        // vis_ptr_->visualize_a_ball(x_new, 0.5, "/brrt_optimize/x_new", visualization::Color::green);
-        // vis_ptr_->visualize_a_ball(nearest_nodeA->x, 0.5, "/brrt_optimize/nearest_nodeA", visualization::Color::black);
-        // vis_ptr_->visualize_a_ball(nearest_nodeB->x, 0.5, "/brrt_optimize/nearest_nodeB", visualization::Color::white);
-        // usleep(50000); // Sleep for 0.1 seconds to visualize the tree growth
-#endif
 
         /* Swap treeA&B */
 
@@ -561,9 +545,6 @@ namespace path_plan
       {
         
 
-#ifdef DEBUG
-        ROS_INFO_STREAM("[BRRT_Optimize]: find_path_use_time: " << solution_cost_time_pair_list_.front().second << ", length: " << solution_cost_time_pair_list_.front().first);
-#endif
         // vis_ptr_->visualize_a_text(Eigen::Vector3d(0, 0, 0), "find_path_use_time","find_path_use_time: " + std::to_string(solution_cost_time_pair_list_.front().second), visualization::Color::black);
         // vis_ptr_->visualize_a_text(Eigen::Vector3d(0, 0, 0.5), "length","length: " + std::to_string(solution_cost_time_pair_list_.front().first), visualization::Color::black);
 
@@ -574,11 +555,11 @@ namespace path_plan
       else if (valid_tree_node_nums_ == max_tree_node_nums_)
       {
         // visualizeWholeTree();
-        ROS_ERROR_STREAM("[BRRT_Optimize]: NOT CONNECTED TO GOAL after " << max_tree_node_nums_ << " nodes added to rrt-tree");
+        ROS_ERROR_STREAM("[BRRT_Optimize_case1]: NOT CONNECTED TO GOAL after " << max_tree_node_nums_ << " nodes added to rrt-tree");
       }
       else
       {
-        ROS_ERROR_STREAM("[BRRT_Optimize]: NOT CONNECTED TO GOAL after " << (ros::Time::now() - rrt_start_time).toSec() << " seconds");
+        ROS_ERROR_STREAM("[BRRT_Optimize_case1]: NOT CONNECTED TO GOAL after " << (ros::Time::now() - rrt_start_time).toSec() << " seconds");
       }
 #endif
       return tree_connected;
@@ -602,8 +583,8 @@ namespace path_plan
         node_p.center = vertice[i];
         tree_nodes.push_back(node_p);
       }
-      vis_ptr_->visualize_balls(tree_nodes, "tree_vertice", visualization::Color::red, 0.5);
-      vis_ptr_->visualize_pairline(edges, "tree_edges", visualization::Color::red, 0.05);
+      vis_ptr_->visualize_balls(tree_nodes, "case1/tree_vertice", visualization::Color::blue, 0.5);
+      vis_ptr_->visualize_pairline(edges, "case1/tree_edges", visualization::Color::blue, 0.05);
     }
 
     void sampleWholeTree(const RRTNode3DPtr &root, vector<Eigen::Vector3d> &vertice, vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> &edges)
